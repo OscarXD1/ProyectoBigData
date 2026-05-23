@@ -1,4 +1,14 @@
-const URL = './model/';
+// Construcción robusta de la URL absoluta para el modelo
+let basePath = window.location.pathname;
+// Si el path no termina en '/' y no tiene extensión (como .html), le agregamos '/'
+if (!basePath.endsWith('/') && !basePath.includes('.')) {
+  basePath += '/';
+}
+// Si termina en un archivo (ej: index.html), obtenemos el directorio contenedor
+if (basePath.includes('.')) {
+  basePath = basePath.substring(0, basePath.lastIndexOf('/') + 1);
+}
+const URL = window.location.origin + basePath + 'model/';
 
 let recognizer;
 let isListening = false;
@@ -32,12 +42,17 @@ const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const historyBody = document.getElementById('historyBody');
 
 async function initModel() {
+  const modelUrl = URL + 'model.json';
+  const metadataUrl = URL + 'metadata.json';
+  console.log("Intentando cargar modelo desde:", modelUrl);
+  console.log("Intentando cargar metadatos desde:", metadataUrl);
+
   try {
     recognizer = speechCommands.create(
       'BROWSER_FFT',
       undefined,
-      URL + 'model.json',
-      URL + 'metadata.json'
+      modelUrl,
+      metadataUrl
     );
     await recognizer.ensureModelLoaded();
     
@@ -45,8 +60,23 @@ async function initModel() {
     toggleBtn.disabled = false;
     toggleText.innerText = 'Iniciar monitoreo';
   } catch (err) {
-    console.error("Error loading model:", err);
+    console.error("Error al cargar el modelo de TensorFlow.js:", err);
     toggleText.innerText = 'Error al cargar';
+    
+    // Crear un mensaje de error detallado y visible para el usuario
+    const errorDiv = document.createElement('div');
+    errorDiv.style.color = '#ff6b6b';
+    errorDiv.style.fontSize = '0.85rem';
+    errorDiv.style.marginTop = '1rem';
+    errorDiv.style.textAlign = 'center';
+    errorDiv.style.lineHeight = '1.4';
+    errorDiv.innerHTML = `
+      <strong>No se pudo cargar el modelo.</strong><br>
+      Asegúrate de que la carpeta <code>model/</code> con <code>model.json</code> y <code>weights.bin</code> esté en la raíz de tu repositorio.<br>
+      <small style="display:block;margin-top:0.5rem;color:#aaa;">Intentó cargar desde:<br>
+      <a href="${modelUrl}" target="_blank" style="color:#3b82f6;word-break:break-all;">${modelUrl}</a></small>
+    `;
+    toggleBtn.parentNode.appendChild(errorDiv);
   }
 }
 
